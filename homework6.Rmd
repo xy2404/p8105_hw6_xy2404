@@ -11,7 +11,17 @@ library(modelr)
 library(purrr)
 ```
 
-```{r}
-homecide <- read_csv('/Users/annieyu/Desktop/data science/homework6/Homework6/data/homicide-data.csv')
+```{r, message=FALSE}
+homicide <- read_csv('./data/homicide-data.csv') %>% 
+  janitor::clean_names() %>%
+  mutate(city_state = str_c(city, ",", state),
+         resolved = as.numeric(disposition == "Closed by arrest")) %>% 
+  filter(city_state =="Dallas,TX"|city_state =="Phoenix,AZ"|city_state =="Kansas City,MO"|city_state =="Tulsa,AL") %>%
+  mutate(victim_race = as.factor(victim_race),
+         victim_sex = as.factor(victim_sex),
+         victim_age = as.numeric(victim_age),
+    victim_race = fct_recode(victim_race, non_white = 'Asian', non_white = 'Black', non_white = 'Hispanic', non_white = 'Other', non_white = 'Unknown', white = 'White'))
+  
+
 ```
 
