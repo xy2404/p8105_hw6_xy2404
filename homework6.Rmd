@@ -1,0 +1,17 @@
+---
+title: "Homework 6"
+author: "Annie Yu xy2404"
+date: "11/22/2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(modelr)
+library(purrr)
+```
+
+```{r}
+homecide <- read_csv('/Users/annieyu/Desktop/data science/homework6/Homework6/data/homicide-data.csv')
+```
+
