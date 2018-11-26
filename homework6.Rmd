@@ -15,7 +15,7 @@ library(ggplot2)
 #Problem 1
 
 ####Cleaning the data and add variable....
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 homicide <- read_csv('./data/homicide-data.csv') %>% 
   janitor::clean_names() %>%
   mutate(city_state = str_c(city, ",", state)) %>% 
@@ -26,9 +26,12 @@ homicide <- read_csv('./data/homicide-data.csv') %>%
   mutate(resolved = as.numeric(disposition == "Closed by arrest"),
          victim_race = as.factor(victim_race),
          victim_age = as.numeric(victim_age)) %>% 
-  mutate(victim_race = fct_recode(victim_race, non_white = 'Asian', non_white = 'Black', non_white = 'Hispanic', non_white = 'Other', non_white = 'Unknown', white = 'White'))
-  
+  mutate(victim_race = fct_recode(victim_race, non_white = 'Asian', non_white = 'Black', non_white = 'Hispanic', non_white = 'Other', non_white = 'Unknown', white = 'White')) %>% 
+  mutate(victim_race = fct_relevel(victim_race,'white'))
 ```
+
+First, I clean the dataset, Then I create new variable for city_state and make the data tidy. such as filter some variables I do not use. The dataset contains `r colnames(homicide)` variables. And the dataset is stored in the dataframe, which has `r nrow(homicide)` rows and `r ncol(homicide)` columns.
+
 
 ####For the city of Baltimore, MD....
 ```{r}
@@ -52,6 +55,9 @@ bal_glm %>%
   
 ```
 
+For the city of Baltimore, MD, I want to know whether there are assoicaiton between resolved and other predictors (victim age, sex and race), I use the glm function to fit the logistic regression. After setting the glm function. I save the output as bal_homicide.rdata. Then apply the broom::tidy to this object; and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing non-white victims to white victims keeping all other variables fixed.
+
+
 ####Calculating for each city....
 ```{r}
 glmfunction = function(x){
@@ -71,20 +77,22 @@ all_city <- nest(homicide, -city_state) %>%
   mutate(adjust_or = map(data, glmfunction))%>% 
   select(city_state, adjust_or) %>% 
   unnest %>% 
-  filter(term=='victim_racewhite')
+  filter(term=='victim_racenon_white')
  
-as.tibble(all_city)
+knitr::kable(all_city)
   
-
 ```
 
+Creating a function to run glm for each of the cities in my dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing non-white victims to white victims. The smaller the adjusted OR suggests more race discrimination in resolving homicides.
+
+
 ####Create a plot that shows the estimated ORs and CIs for each city
-```{r}
+```{r, message=FALSE}
 all_city %>% 
-ggplot(aes(x = reorder(city_state, -OR), y=OR))+
+ggplot(aes(x = reorder(city_state, -OR), y=OR,fill = city_state))+
   geom_bar(stat = 'identity', alpha = 1)+
   geom_errorbar(mapping=aes(x= city_state, ymin=OR_lower, ymax=OR_upper))+
-  theme(legend.position = "bottom", axis.text.x = element_text(angle = 90, hjust = 1), legend.key.width = unit(0.15,'cm')) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 90, hjust = 1), legend.key.width = unit(0.15,'cm')) +
   labs(
     x = "City_State",
     y = "Adjusted Odds Ratio with 95% CIs"
@@ -93,8 +101,11 @@ ggplot(aes(x = reorder(city_state, -OR), y=OR))+
   
 ```
 
+I create the bar diagram to show the difference OR for each city. From this plot, we could conclude  Boston has least race discrimination while Tempa has the highest race discrimation. 
+
+
 #Problem 2
-```{r}
+```{r, message=FALSE}
 birthweight<- read_csv('./data/birthweight.csv') %>% 
   janitor::clean_names() %>%
   mutate(babysex = as.factor(babysex),
@@ -109,6 +120,9 @@ fullmodel <- lm(bwt ~ ., data = birthweight)
 summary(fullmodel)
 
 ```
+
+I clean the dataset firstly, Then I change the character of variables and  make the data tidy. The dataset contains `r colnames(birthweight)` variables. And the dataset is stored in the dataframe, which has `r nrow(birthweight)` rows and `r ncol(birthweight)` columns. I want to explore the association between bwt and other all predictors, I use the lm function to find it.
+
 
 #### Hypothesis:
 $$
@@ -136,6 +150,8 @@ birthweight %>%
   
 ```
 
+The hypothesis is explore the relationship for predictors (babysex, bhead, blength, wtgain, smoken) and birthweight. The add the predictions and residual to explore the trend and make the point diagram to conclude it. Residuals form a horizontal (linear) ‘band’ around zero. However, there are some potential outliers in the lower range of birthweight on the left.
+
 
 #### Compare other two models...
 ```{r}
@@ -162,9 +178,10 @@ cverror <- birthweight %>%
          
 ```
 
-
 ```{r}
 ggplot(cverror, aes(x=model, y = rmse, fill = model))+
   geom_violin()
 ```
+
+In this plot, we can observe that the test_model1 has a much lower rmse that the other two, so test_model1 is might be a better model compared to the other two.
 

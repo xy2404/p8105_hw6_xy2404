@@ -19,11 +19,11 @@ homicide <- read_csv('./data/homicide-data.csv') %>%
   mutate(resolved = as.numeric(disposition == "Closed by arrest"),
          victim_race = as.factor(victim_race),
          victim_age = as.numeric(victim_age)) %>% 
-  mutate(victim_race = fct_recode(victim_race, non_white = 'Asian', non_white = 'Black', non_white = 'Hispanic', non_white = 'Other', non_white = 'Unknown', white = 'White'))
+  mutate(victim_race = fct_recode(victim_race, non_white = 'Asian', non_white = 'Black', non_white = 'Hispanic', non_white = 'Other', non_white = 'Unknown', white = 'White')) %>% 
+  mutate(victim_race = fct_relevel(victim_race,'white'))
 ```
 
-    ## Warning in evalq(as.numeric(victim_age), <environment>): NAs introduced by
-    ## coercion
+First, I clean the dataset, Then I create new variable for city\_state and make the data tidy. such as filter some variables I do not use. The dataset contains uid, reported\_date, victim\_last, victim\_first, victim\_race, victim\_age, victim\_sex, city, state, lat, lon, disposition, city\_state, resolved variables. And the dataset is stored in the dataframe, which has 48507 rows and 14 columns.
 
 #### For the city of Baltimore, MD....
 
@@ -47,12 +47,14 @@ bal_glm %>%
   knitr::kable()
 ```
 
-| term              |     log\_OR|         OR|    p.value|  OR\_lower|  OR\_upper|
-|:------------------|-----------:|----------:|----------:|----------:|----------:|
-| (Intercept)       |   0.3664307|  1.4425765|  0.0292029|  1.0377869|  2.0052545|
-| victim\_age       |  -0.0069900|  0.9930344|  0.0321594|  0.9867043|  0.9994050|
-| victim\_racewhite |   0.8195997|  2.2695913|  0.0000027|  1.6118026|  3.1958283|
-| victim\_sexMale   |  -0.8877869|  0.4115656|  0.0000000|  0.3152280|  0.5373452|
+| term                   |     log\_OR|         OR|    p.value|  OR\_lower|  OR\_upper|
+|:-----------------------|-----------:|----------:|----------:|----------:|----------:|
+| (Intercept)            |   1.1860305|  3.2740589|  0.0000004|  2.0671700|  5.1855735|
+| victim\_age            |  -0.0069900|  0.9930344|  0.0321594|  0.9867043|  0.9994050|
+| victim\_racenon\_white |  -0.8195997|  0.4406080|  0.0000027|  0.3129079|  0.6204234|
+| victim\_sexMale        |  -0.8877869|  0.4115656|  0.0000000|  0.3152280|  0.5373452|
+
+For the city of Baltimore, MD, I want to know whether there are assoicaiton between resolved and other predictors (victim age, sex and race), I use the glm function to fit the logistic regression. After setting the glm function. I save the output as bal\_homicide.rdata. Then apply the broom::tidy to this object; and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing non-white victims to white victims keeping all other variables fixed.
 
 #### Calculating for each city....
 
@@ -74,34 +76,71 @@ all_city <- nest(homicide, -city_state) %>%
   mutate(adjust_or = map(data, glmfunction))%>% 
   select(city_state, adjust_or) %>% 
   unnest %>% 
-  filter(term=='victim_racewhite')
+  filter(term=='victim_racenon_white')
  
-as.tibble(all_city)
+knitr::kable(all_city)
 ```
 
-    ## # A tibble: 47 x 7
-    ##    city_state     term            log_OR    OR   p.value OR_lower OR_upper
-    ##    <chr>          <chr>            <dbl> <dbl>     <dbl>    <dbl>    <dbl>
-    ##  1 Albuquerque,NM victim_racewh…  0.299  1.35    2.38e-1    0.821     2.22
-    ##  2 Atlanta,GA     victim_racewh…  0.284  1.33    3.17e-1    0.761     2.32
-    ##  3 Baltimore,MD   victim_racewh…  0.820  2.27    2.68e-6    1.61      3.20
-    ##  4 Baton Rouge,LA victim_racewh…  0.404  1.50    2.96e-1    0.702     3.20
-    ##  5 Birmingham,AL  victim_racewh… -0.0385 0.962   8.86e-1    0.569     1.63
-    ##  6 Boston,MA      victim_racewh…  2.17   8.73    1.72e-6    3.59     21.2 
-    ##  7 Buffalo,NY     victim_racewh…  0.942  2.56    2.31e-3    1.40      4.70
-    ##  8 Charlotte,NC   victim_racewh…  0.584  1.79    3.83e-2    1.03      3.12
-    ##  9 Chicago,IL     victim_racewh…  0.576  1.78    2.07e-5    1.36      2.32
-    ## 10 Cincinnati,OH  victim_racewh…  1.14   3.14    4.28e-5    1.82      5.43
-    ## # ... with 37 more rows
+| city\_state       | term                   |     log\_OR|         OR|    p.value|  OR\_lower|  OR\_upper|
+|:------------------|:-----------------------|-----------:|----------:|----------:|----------:|----------:|
+| Albuquerque,NM    | victim\_racenon\_white |  -0.2991208|  0.7414698|  0.2377043|  0.4512868|  1.2182443|
+| Atlanta,GA        | victim\_racenon\_white |  -0.2839530|  0.7528020|  0.3172864|  0.4315063|  1.3133316|
+| Baltimore,MD      | victim\_racenon\_white |  -0.8195997|  0.4406080|  0.0000027|  0.3129079|  0.6204234|
+| Baton Rouge,LA    | victim\_racenon\_white |  -0.4040228|  0.6676289|  0.2963820|  0.3127439|  1.4252185|
+| Birmingham,AL     | victim\_racenon\_white |   0.0385265|  1.0392783|  0.8855421|  0.6150483|  1.7561211|
+| Boston,MA         | victim\_racenon\_white |  -2.1667164|  0.1145531|  0.0000017|  0.0471531|  0.2782939|
+| Buffalo,NY        | victim\_racenon\_white |  -0.9418961|  0.3898879|  0.0023055|  0.2127526|  0.7145036|
+| Charlotte,NC      | victim\_racenon\_white |  -0.5842897|  0.5575017|  0.0382543|  0.3207914|  0.9688794|
+| Chicago,IL        | victim\_racenon\_white |  -0.5761032|  0.5620844|  0.0000207|  0.4311321|  0.7328123|
+| Cincinnati,OH     | victim\_racenon\_white |  -1.1445849|  0.3183560|  0.0000428|  0.1839996|  0.5508195|
+| Columbus,OH       | victim\_racenon\_white |  -0.1570014|  0.8547029|  0.3029547|  0.6339868|  1.1522590|
+| Denver,CO         | victim\_racenon\_white |  -0.5076856|  0.6018870|  0.0541782|  0.3589787|  1.0091626|
+| Detroit,MI        | victim\_racenon\_white |  -0.4288684|  0.6512456|  0.0036337|  0.4877782|  0.8694953|
+| Durham,NC         | victim\_racenon\_white |   0.0028136|  1.0028175|  0.9951589|  0.4041085|  2.4885469|
+| Fort Worth,TX     | victim\_racenon\_white |  -0.1769334|  0.8378356|  0.4007906|  0.5545077|  1.2659311|
+| Fresno,CA         | victim\_racenon\_white |  -0.8034052|  0.4478015|  0.0176545|  0.2306060|  0.8695617|
+| Houston,TX        | victim\_racenon\_white |  -0.1362727|  0.8726047|  0.2295200|  0.6986847|  1.0898176|
+| Indianapolis,IN   | victim\_racenon\_white |  -0.6840764|  0.5045560|  0.0000015|  0.3817941|  0.6667909|
+| Jacksonville,FL   | victim\_racenon\_white |  -0.4182842|  0.6581751|  0.0024149|  0.5023197|  0.8623880|
+| Las Vegas,NV      | victim\_racenon\_white |  -0.2804869|  0.7554159|  0.0299233|  0.5864306|  0.9730958|
+| Long Beach,CA     | victim\_racenon\_white |  -0.2307939|  0.7939031|  0.5280169|  0.3876546|  1.6258857|
+| Los Angeles,CA    | victim\_racenon\_white |  -0.4067023|  0.6658424|  0.0131181|  0.4828459|  0.9181936|
+| Louisville,KY     | victim\_racenon\_white |  -0.9367139|  0.3919136|  0.0000094|  0.2589809|  0.5930794|
+| Memphis,TN        | victim\_racenon\_white |  -0.2454925|  0.7823191|  0.2303081|  0.5238191|  1.1683866|
+| Miami,FL          | victim\_racenon\_white |  -0.5512363|  0.5762370|  0.0107597|  0.3772438|  0.8801975|
+| Milwaukee,wI      | victim\_racenon\_white |  -0.4582502|  0.6323892|  0.0457473|  0.4033912|  0.9913854|
+| Minneapolis,MN    | victim\_racenon\_white |  -0.4374158|  0.6457029|  0.1718976|  0.3447349|  1.2094287|
+| Nashville,TN      | victim\_racenon\_white |  -0.1069270|  0.8985913|  0.5107693|  0.6533730|  1.2358427|
+| New Orleans,LA    | victim\_racenon\_white |  -0.7637119|  0.4659337|  0.0010824|  0.2947205|  0.7366105|
+| New York,NY       | victim\_racenon\_white |  -0.6321289|  0.5314592|  0.0540473|  0.2793572|  1.0110671|
+| Oakland,CA        | victim\_racenon\_white |  -1.5465668|  0.2129779|  0.0000214|  0.1043603|  0.4346441|
+| Oklahoma City,OK  | victim\_racenon\_white |  -0.3838211|  0.6812533|  0.0337141|  0.4780242|  0.9708841|
+| Omaha,NE          | victim\_racenon\_white |  -1.7783134|  0.1689228|  0.0000000|  0.0935132|  0.3051432|
+| Philadelphia,PA   | victim\_racenon\_white |  -0.4403262|  0.6438263|  0.0021085|  0.4862491|  0.8524692|
+| Pittsburgh,PA     | victim\_racenon\_white |  -1.2674074|  0.2815606|  0.0000093|  0.1607457|  0.4931788|
+| Richmond,VA       | victim\_racenon\_white |  -0.8042697|  0.4474146|  0.1214624|  0.1616764|  1.2381512|
+| San Antonio,TX    | victim\_racenon\_white |  -0.3720067|  0.6893496|  0.0694756|  0.4613199|  1.0300939|
+| Sacramento,CA     | victim\_racenon\_white |  -0.2475177|  0.7807364|  0.3812291|  0.4486304|  1.3586894|
+| Savannah,GA       | victim\_racenon\_white |  -0.5168361|  0.5964045|  0.1802729|  0.2800315|  1.2702083|
+| San Bernardino,CA | victim\_racenon\_white |  -0.1276678|  0.8801457|  0.7564200|  0.3928312|  1.9719832|
+| San Diego,CA      | victim\_racenon\_white |  -0.7270019|  0.4833560|  0.0032977|  0.2976277|  0.7849839|
+| San Francisco,CA  | victim\_racenon\_white |  -0.7802724|  0.4582812|  0.0007982|  0.2904504|  0.7230896|
+| St. Louis,MO      | victim\_racenon\_white |  -0.5498302|  0.5770478|  0.0021851|  0.4059333|  0.8202928|
+| Stockton,CA       | victim\_racenon\_white |  -0.9789109|  0.3757201|  0.0030932|  0.1964244|  0.7186762|
+| Tampa,FL          | victim\_racenon\_white |   0.1474076|  1.1588262|  0.6709560|  0.5870394|  2.2875435|
+| Tulsa,OK          | victim\_racenon\_white |  -0.5067195|  0.6024687|  0.0084916|  0.4130931|  0.8786605|
+| Washington,DC     | victim\_racenon\_white |  -0.6731847|  0.5100815|  0.0532959|  0.2577041|  1.0096200|
+
+Creating a function to run glm for each of the cities in my dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing non-white victims to white victims. The smaller the adjusted OR suggests more race discrimination in resolving homicides.
 
 #### Create a plot that shows the estimated ORs and CIs for each city
 
 ``` r
 all_city %>% 
-ggplot(aes(x = reorder(city_state, -OR), y=OR))+
+ggplot(aes(x = reorder(city_state, -OR), y=OR,fill = city_state))+
   geom_bar(stat = 'identity', alpha = 1)+
   geom_errorbar(mapping=aes(x= city_state, ymin=OR_lower, ymax=OR_upper))+
-  theme(legend.position = "bottom", axis.text.x = element_text(angle = 90, hjust = 1), legend.key.width = unit(0.15,'cm')) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 90, hjust = 1), legend.key.width = unit(0.15,'cm')) +
   labs(
     x = "City_State",
     y = "Adjusted Odds Ratio with 95% CIs"
@@ -120,6 +159,8 @@ ggplot(aes(x = reorder(city_state, -OR), y=OR))+
     ## attr(,"class")
     ## [1] "labels"
 
+I create the bar diagram to show the difference OR for each city. From this plot, we could conclude Boston has least race discrimination while Tempa has the highest race discrimation.
+
 Problem 2
 =========
 
@@ -130,19 +171,7 @@ birthweight<- read_csv('./data/birthweight.csv') %>%
          frace = as.factor(frace),
          malform = as.factor(malform),
          mrace = as.factor(mrace))
-```
 
-    ## Parsed with column specification:
-    ## cols(
-    ##   .default = col_integer(),
-    ##   gaweeks = col_double(),
-    ##   ppbmi = col_double(),
-    ##   smoken = col_double()
-    ## )
-
-    ## See spec(...) for full column specifications.
-
-``` r
 skimr::skim(birthweight)
 ```
 
@@ -250,6 +279,8 @@ summary(fullmodel)
     ## Multiple R-squared:  0.7183, Adjusted R-squared:  0.717 
     ## F-statistic: 524.6 on 21 and 4320 DF,  p-value: < 2.2e-16
 
+I clean the dataset firstly, Then I change the character of variables and make the data tidy. The dataset contains babysex, bhead, blength, bwt, delwt, fincome, frace, gaweeks, malform, menarche, mheight, momage, mrace, parity, pnumlbw, pnumsga, ppbmi, ppwt, smoken, wtgain variables. And the dataset is stored in the dataframe, which has 4342 rows and 20 columns. I want to explore the association between bwt and other all predictors, I use the lm function to find it.
+
 #### Hypothesis:
 
 *Y* = *β*<sub>0</sub> + *β*<sub>1</sub> \* (*x*<sub>1</sub>)*b**a**b**y**s**e**x* + *β*<sub>2</sub> \* (*x*<sub>2</sub>)*b**h**e**a**d* + *β*<sub>3</sub> \* (*x*<sub>3</sub>)*b**l**e**n**g**t**h* + *β*<sub>4</sub> \* (*x*<sub>4</sub>)*w**t**g**a**i**n* + *β*<sub>5</sub> \* (*x*<sub>5</sub>)*s**m**o**k**e**n*
@@ -302,6 +333,8 @@ birthweight %>%
 
 ![](homework6_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
+The hypothesis is explore the relationship for predictors (babysex, bhead, blength, wtgain, smoken) and birthweight. The add the predictions and residual to explore the trend and make the point diagram to conclude it. Residuals form a horizontal (linear) ‘band’ around zero. However, there are some potential outliers in the lower range of birthweight on the left.
+
 #### Compare other two models...
 
 ``` r
@@ -333,3 +366,5 @@ ggplot(cverror, aes(x=model, y = rmse, fill = model))+
 ```
 
 ![](homework6_files/figure-markdown_github/unnamed-chunk-8-1.png)
+
+In this plot, we can observe that the test\_model1 has a much lower rmse that the other two, so test\_model1 is might be a better model compared to the other two.
