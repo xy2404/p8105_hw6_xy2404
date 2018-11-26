@@ -73,25 +73,26 @@ glmfunction = function(x){
 all_city <- nest(homicide, -city_state) %>% 
   mutate(adjust_or = map(data, glmfunction))%>% 
   select(city_state, adjust_or) %>% 
-  unnest  
+  unnest %>% 
+  filter(term=='victim_racewhite')
  
 as.tibble(all_city)
 ```
 
-    ## # A tibble: 211 x 7
-    ##    city_state     term              log_OR    OR p.value OR_lower OR_upper
-    ##    <chr>          <chr>              <dbl> <dbl>   <dbl>    <dbl>    <dbl>
-    ##  1 Albuquerque,NM (Intercept)       0.933  2.54  1.33e-2    1.21     5.32 
-    ##  2 Albuquerque,NM victim_age       -0.0230 0.977 1.08e-3    0.964    0.991
-    ##  3 Albuquerque,NM victim_racewhite  0.299  1.35  2.38e-1    0.821    2.22 
-    ##  4 Albuquerque,NM victim_sexMale    0.455  1.58  1.15e-1    0.895    2.77 
-    ##  5 Albuquerque,NM victim_sexUnkno…  2.10   8.19  1.86e-3    2.18    30.8  
-    ##  6 Atlanta,GA     (Intercept)       0.868  2.38  2.83e-4    1.49     3.81 
-    ##  7 Atlanta,GA     victim_age       -0.0118 0.988 9.81e-3    0.979    0.997
-    ##  8 Atlanta,GA     victim_racewhite  0.284  1.33  3.17e-1    0.761    2.32 
-    ##  9 Atlanta,GA     victim_sexMale   -0.0101 0.990 9.58e-1    0.679    1.44 
-    ## 10 Baltimore,MD   (Intercept)       0.366  1.44  2.92e-2    1.04     2.01 
-    ## # ... with 201 more rows
+    ## # A tibble: 47 x 7
+    ##    city_state     term            log_OR    OR   p.value OR_lower OR_upper
+    ##    <chr>          <chr>            <dbl> <dbl>     <dbl>    <dbl>    <dbl>
+    ##  1 Albuquerque,NM victim_racewh…  0.299  1.35    2.38e-1    0.821     2.22
+    ##  2 Atlanta,GA     victim_racewh…  0.284  1.33    3.17e-1    0.761     2.32
+    ##  3 Baltimore,MD   victim_racewh…  0.820  2.27    2.68e-6    1.61      3.20
+    ##  4 Baton Rouge,LA victim_racewh…  0.404  1.50    2.96e-1    0.702     3.20
+    ##  5 Birmingham,AL  victim_racewh… -0.0385 0.962   8.86e-1    0.569     1.63
+    ##  6 Boston,MA      victim_racewh…  2.17   8.73    1.72e-6    3.59     21.2 
+    ##  7 Buffalo,NY     victim_racewh…  0.942  2.56    2.31e-3    1.40      4.70
+    ##  8 Charlotte,NC   victim_racewh…  0.584  1.79    3.83e-2    1.03      3.12
+    ##  9 Chicago,IL     victim_racewh…  0.576  1.78    2.07e-5    1.36      2.32
+    ## 10 Cincinnati,OH  victim_racewh…  1.14   3.14    4.28e-5    1.82      5.43
+    ## # ... with 37 more rows
 
 #### Create a plot that shows the estimated ORs and CIs for each city
 
@@ -99,7 +100,7 @@ as.tibble(all_city)
 all_city %>% 
 ggplot(aes(x = reorder(city_state, -OR), y=OR))+
   geom_bar(stat = 'identity', alpha = 1)+
-  #geom_errorbar(aes(x= city_state, ymin=OR_lower, ymax=OR_upper))+
+  geom_errorbar(mapping=aes(x= city_state, ymin=OR_lower, ymax=OR_upper))+
   theme(legend.position = "bottom", axis.text.x = element_text(angle = 90, hjust = 1), legend.key.width = unit(0.15,'cm')) +
   labs(
     x = "City_State",
